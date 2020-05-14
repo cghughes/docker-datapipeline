@@ -1,4 +1,4 @@
-# CGH data-pipline
+# CGH DEV data-pipline
 CGH DEV Docker Data Pipeline Template
 1. Cassandra DB (with 3 nodes) - pipeline data store
 2. Maria DB (single node) - airflow metadata instance
