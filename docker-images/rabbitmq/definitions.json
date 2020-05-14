@@ -1,0 +1,103 @@
+{
+    "rabbit_version": "3.8.3",
+    "rabbitmq_version": "3.8.3",
+    "users": [
+        {
+            "name": "airflow",
+            "password_hash": "pd4/6O6i48EtlJRxRk6L1nc4N7tuBxGy9CLI3MmVvAFa8nNI",
+            "hashing_algorithm": "rabbit_password_hashing_sha256",
+            "tags": "management"
+        },
+        {
+            "name": "admin",
+            "password_hash": "b5REpdh7StmARr2JyauGVKAy7tiRQ3JIo86iO/9cdGKFxV6k",
+            "hashing_algorithm": "rabbit_password_hashing_sha256",
+            "tags": "administrator"
+        }
+    ],
+    "vhosts": [
+        {
+            "name": "/"
+        },
+        {
+            "name": "airflow"
+        }
+    ],
+    "permissions": [
+        {
+            "user": "admin",
+            "vhost": "/",
+            "configure": ".*",
+            "write": ".*",
+            "read": ".*"
+        },
+        {
+            "user": "airflow",
+            "vhost": "airflow",
+            "configure": ".*",
+            "write": ".*",
+            "read": ".*"
+        },
+        {
+            "user": "admin",
+            "vhost": "airflow",
+            "configure": ".*",
+            "write": ".*",
+            "read": ".*"
+        }
+    ],
+    "topic_permissions": [],
+    "parameters": [],
+    "global_parameters": [
+        {
+            "name": "cluster_name",
+            "value": "rabbit01@rabbit01"
+        },
+        {
+            "name": "internal_cluster_id",
+            "value": "rabbitmq-cluster-id-ers37j7ajDcGOngLfI2Kag"
+        }
+    ],
+    "policies": [],
+    "queues": [
+        {
+            "name": "in",
+            "vhost": "/",
+            "durable": true,
+            "auto_delete": false,
+            "arguments": {
+                "x-queue-type": "classic"
+            }
+        },
+        {
+            "name": "celery.inbound",
+            "vhost": "airflow",
+            "durable": true,
+            "auto_delete": false,
+            "arguments": {
+                "x-queue-type": "classic"
+            }
+        }
+    ],
+    "exchanges": [
+        {
+            "name": "celery.inbound",
+            "vhost": "airflow",
+            "type": "direct",
+            "durable": true,
+            "auto_delete": false,
+            "internal": false,
+            "arguments": {}
+        }
+    ],
+    "bindings": [
+        {
+            "source": "celery.inbound",
+            "vhost": "airlow",
+            "destination": "celery.inbound",
+            "destination_type": "queue",
+            "routing_key": "celery.inbound",
+            "arguments": {}
+        }
+    ]
+}

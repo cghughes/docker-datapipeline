@@ -1,0 +1,187 @@
+version: '3.3'
+services:
+  maria01:
+    build:
+      context: docker-images/mariadb
+      dockerfile: Dockerfile
+    container_name: "maria01"
+    ports:
+      - "3306:3306"    
+    environment:
+      - "MYSQL_ROOT_PASSWORD=3point142"
+    volumes:
+      - ./volumes/db/maria01/data:/var/lib/mysql/
+    networks:
+      devnetwork:
+        aliases:
+          - maria01.cgh.dev
+
+  cas01:
+    build:
+      context: docker-images/cassandra-node
+      dockerfile: Dockerfile
+    container_name: "cas01"  
+    ports:
+      - "7000:7000"
+      - "9042:9042"
+    volumes:
+      - ./volumes/db/cas01:/var/lib/cassandra     
+    environment:
+      CASSANDRA_BROADCAST_ADDRESS: cas01
+      #CASSANDRA_SEEDS: cas01, cas02, cas03
+      CASSANDRA_CLUSTER_NAME: data-pipeline
+      CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch 
+      CASSANDRA_DC: local01
+    networks:
+      devnetwork:
+        aliases:
+          - cas01.cgh.dev  
+  cas02:
+    build:
+      context: docker-images/cassandra-node
+      dockerfile: Dockerfile
+    container_name: "cas02"  
+    ports:
+      - "7001:7000"
+    volumes:
+      - ./volumes/db/cas02:/var/lib/cassandra          
+    environment:
+      CASSANDRA_BROADCAST_ADDRESS: cas02
+      CASSANDRA_SEEDS: cas02, cas01
+      CASSANDRA_CLUSTER_NAME: data-pipeline
+      CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch 
+      CASSANDRA_DC: local02      
+    networks:
+      devnetwork:
+        aliases:
+          - cas02.cgh.dev
+  cas03:
+    build:
+      context: docker-images/cassandra-node
+      dockerfile: Dockerfile
+    container_name: "cas03"  
+    ports:
+      - "7002:7000"
+    volumes:
+      - ./volumes/db/cas03:/var/lib/cassandra          
+    environment:
+      CASSANDRA_BROADCAST_ADDRESS: cas03
+      CASSANDRA_SEEDS: cas03, cas01
+      CASSANDRA_CLUSTER_NAME: data-pipeline
+      CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch 
+      CASSANDRA_DC: local03   
+    networks:
+      devnetwork:
+        aliases:
+          - cas03.cgh.dev
+
+  airflow:
+    build:
+      context: docker-images/airflow
+      dockerfile: Dockerfile
+    depends_on:
+      - maria01
+      - cas01
+      - rabbit01      
+    expose:
+      - 8080
+    volumes:
+      - ./volumes/dags:/opt/airflow/dags
+      - ./volumes/work:/opt/airflow/dags/notebooks
+    ports:
+      - "8080:8080"
+      - "5555:5555"
+    container_name: "airflow"
+    networks:
+      devnetwork:
+        aliases:
+          - airflow.cgh.dev  
+
+  airflow_worker01:
+    build:
+      context: docker-images/airflow
+      dockerfile: Dockerfile
+    hostname: airflow_worker01
+    depends_on:
+      - airflow   
+      - rabbit01
+    volumes:
+      - ./volumes/dags:/opt/airflow/dags
+      - ./volumes/work:/opt/airflow/dags/notebooks
+    container_name: "airflow_worker01"
+    entrypoint: "./initAirFlow-worker.sh"
+    networks:
+      devnetwork:
+        aliases:
+          - airflow_worker01.cgh.dev  
+  
+  airflow_worker02:
+    build:
+      context: docker-images/airflow
+      dockerfile: Dockerfile
+    hostname: airflow_worker02
+    depends_on:
+      - airflow   
+      - rabbit01
+    volumes:
+      - ./volumes/dags:/opt/airflow/dags
+      - ./volumes/work:/opt/airflow/dags/notebooks
+    container_name: "airflow_worker02"
+    entrypoint: "./initAirFlow-worker.sh"
+    networks:
+      devnetwork:
+        aliases:
+          - airflow_worker02.cgh.dev  
+
+  notebook:
+    build:
+      context: docker-images/jupyter
+      dockerfile: Dockerfile
+    depends_on:
+      - cas01
+      - maria01
+    volumes:
+      - ./volumes/work:/home/jovyan/work/
+      - ./volumes/input:/home/jovyan/input/
+      - ./volumes/output:/home/jovyan/output/
+    ports:
+      - "8888:8888"
+    container_name: "jupyter_notebook"
+    command: "start-notebook.sh \
+      --NotebookApp.password='sha1:14a870d2fae2:1f4455124c8a03482d0f60429bd68ef5b029125b'"
+    networks:
+      devnetwork:
+        aliases:
+          - nb.cgh.dev        
+
+  rabbit01:
+    build:
+      context: docker-images/rabbitmq
+      dockerfile: Dockerfile
+    container_name: "rabbit01"  
+    hostname: rabbit01
+    expose:
+      - 5672
+      - 25672
+      - 15672
+    ports:
+      - "5672:5672"
+      - "8082:15672"
+    environment:
+      #- RABBITMQ_ERLANG_COOKIE=3point142
+      #- RABBITMQ_DEFAULT_USER=admin
+      #- RABBITMQ_DEFAULT_PASS=3point142
+      #- RABBITMQ_NODENAME=rabbit01
+      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbitmq_management load_definitions "/tmp/definitions.json"
+    networks:
+      devnetwork:
+        aliases:
+          - rabbit01.cgh.dev            
+
+
+networks:
+  devnetwork:
+    driver: bridge
+    driver_opts:
+      com.docker.network.enable_ipv6: "false"
+

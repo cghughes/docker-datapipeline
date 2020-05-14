@@ -1,0 +1,5 @@
+papermill==2.1.1
+ipykernel==5.2.1
+apache-airflow[mysql,rabbitmq,celery]==1.10.10
+pyamqp==0.1.0.1
+tornado==6.0.4
